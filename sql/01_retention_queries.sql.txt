@@ -1,0 +1,47 @@
+Perfect, you are in the right folder. It's empty because you haven't created the SQL file yet.
+
+*Do this exactly:*
+
+1. In that menu you opened, click *New > Text Document*
+2. A file `New Text Document.txt` will appear
+3. Right-click on it > *Rename* > type exactly: `01_retention_queries.sql` and press Enter
+   - If Windows asks "Are you sure you want to change extension?" click *Yes*
+
+4. Now double-click that file. It will open in Notepad / VS Code. Paste this code inside:
+-- customer-service-retention | Data Cleaning & Retention Logic
+-- File: sql/01_retention_queries.sql
+
+-- STEP 1: Check raw data structure
+SELECT COUNT(*) AS total_rows FROM raw_transactions;
+SELECT * FROM raw_transactions LIMIT 20;
+
+-- STEP 2: Data Cleaning - Remove duplicates and nulls
+CREATE TABLE clean_transactions AS
+SELECT DISTINCT *
+FROM raw_transactions
+WHERE customer_id IS NOT NULL;
+
+-- STEP 3: Monthly Retention Metrics
+SELECT 
+  DATE_TRUNC('month', transaction_date) AS cohort_month,
+  COUNT(DISTINCT customer_id) AS total_customers,
+  SUM(CASE WHEN churn_flag = 1 THEN 1 ELSE 0 END) AS churned
+FROM clean_transactions
+GROUP BY 1
+ORDER BY 1;
+
+-- STEP 4: Customer Retention Rate
+SELECT 
+  cohort_month,
+  retained_customers * 100.0 / total_customers AS retention_rate_percent
+FROM (
+  SELECT 
+    DATE_TRUNC('month', first_purchase) AS cohort_month,
+    COUNT(*) AS total_customers,
+    COUNT(CASE WHEN last_purchase > first_purchase + INTERVAL '30 days' THEN 1 END) AS retained_customers
+  FROM clean_transactions
+  GROUP BY 1
+) t;
+5. Press *Ctrl + S* to save and close.
+
+Once done, take a screenshot of the file inside the folder so I can confirm, and I'll give you the next step: *Creating the Notebook and pushing to GitHub.*
